@@ -156,7 +156,7 @@ WORKDIR /app
 ENV WHISPER_CACHE_DIR="/app/whisper_cache"
 
 # Create cache directory (no need for chown here yet)
-RUN mkdir -p ${WHISPER_CACHE_DIR}
+RUN mkdir -p ${WHISPER_CACHE_DIR} \
     mkdir -p /app/downloads
 
 # Copy the requirements file first to optimize caching
