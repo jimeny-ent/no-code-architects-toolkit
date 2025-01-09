@@ -12,19 +12,22 @@ def download_video():
         return jsonify({"error": "URL is required"}), 400
 
     url = data['url']
-    format = data.get('format', 'best')  # Default to best quality
-    download_path = '/app/downloads'
+    referer = data.get('referer', '')
+    download_path = '/tmp'  # Use /tmp in Cloud Run
     
     ydl_opts = {
-        'format': format,
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(download_path, '%(title)s.%(ext)s'),
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
+        'http_headers': {
+            'Referer': referer,
+        },
+        'ffmpeg_location': '/usr/bin'  # Cloud Run ffmpeg location
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Download the video
             info = ydl.extract_info(url, download=True)
             video_path = os.path.join(download_path, f"{info['title']}.{info['ext']}")
 
@@ -32,17 +35,18 @@ def download_video():
             storage_provider = get_storage_provider()
             video_url = storage_provider.upload_file(video_path)
 
-            # Clean up the local file
-            os.remove(video_path)
+            # Clean up
+            if os.path.exists(video_path):
+                os.remove(video_path)
 
             return jsonify({
                 "title": info['title'],
-                "url": video_url,
-                "format": info['format'],
-                "duration": info.get('duration'),
-                "view_count": info.get('view_count'),
-                "description": info.get('description')
+                "url": video_url,  # Return cloud storage URL instead of local path
+                "format": info['format']
             }), 200
 
     except Exception as e:
+        # Clean up on error
+        if 'video_path' in locals() and os.path.exists(video_path):
+            os.remove(video_path)
         return jsonify({"error": str(e)}), 500
