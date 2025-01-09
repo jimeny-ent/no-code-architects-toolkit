@@ -167,17 +167,17 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install openai-whisper && \
     pip install jsonschema 
 
-# Install yt-dlp
-RUN pip install --no-cache-dir yt-dlp
-
-# Create a directory for downloads
-RUN mkdir -p /app/downloads && chown appuser:appuser /app/downloads
-
 # Create the appuser 
 RUN useradd -m appuser 
 
 # Give appuser ownership of the /app directory (including whisper_cache)
 RUN chown appuser:appuser /app 
+
+# Install yt-dlp
+RUN pip install --no-cache-dir yt-dlp
+
+# Create a directory for downloads
+RUN mkdir -p /app/downloads && chown appuser:appuser /app/downloads
 
 # Important: Switch to the appuser before downloading the model
 USER appuser
