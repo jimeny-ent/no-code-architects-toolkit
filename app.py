@@ -28,6 +28,17 @@ def parse_queue_length():
 MAX_QUEUE_LENGTH = parse_queue_length()
 MAX_WORKERS = int(os.environ.get('MAX_WORKERS', 10))
 
+@app.route('/debug/routes')
+def list_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': str(rule.endpoint),
+            'methods': list(rule.methods),
+            'path': str(rule)
+        })
+    return jsonify(routes)
+
 def create_app():
     app = Flask(__name__)
 
