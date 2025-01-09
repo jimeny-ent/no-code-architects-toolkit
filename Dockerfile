@@ -173,16 +173,16 @@ RUN useradd -m appuser
 # Give appuser ownership of the /app directory (including whisper_cache)
 RUN chown appuser:appuser /app 
 
+# Important: Switch to the appuser before downloading the model
+USER appuser
+
+RUN python -c "import os; print(os.environ.get('WHISPER_CACHE_DIR')); import whisper; whisper.load_model('base')"
+
 # Install yt-dlp
 RUN pip install --no-cache-dir yt-dlp
 
 # Create a directory for downloads
 RUN mkdir -p /app/downloads && chown appuser:appuser /app/downloads
-
-# Important: Switch to the appuser before downloading the model
-USER appuser
-
-RUN python -c "import os; print(os.environ.get('WHISPER_CACHE_DIR')); import whisper; whisper.load_model('base')"
 
 # Copy the rest of the application code
 COPY . .
