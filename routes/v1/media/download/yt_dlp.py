@@ -107,7 +107,6 @@ class ProgressHook:
             }
 
 @v1_media_download_ytdlp_bp.route('/v1/media/download/yt-dlp', methods=['POST'])
-
 def download_video():
     """Download video with comprehensive error handling and logging"""
     start_time = time.time()
