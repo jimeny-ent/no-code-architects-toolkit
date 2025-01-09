@@ -106,7 +106,7 @@ class ProgressHook:
                 'error': str(d.get('error', 'Unspecified error'))
             }
 
-@v1_media_download_ytdlp_bp.route('/v1/media/download/yt-dlp', methods=['POST'])
+@v1_media_download_ytdlp_bp.route('/', methods=['POST'])
 def download_video():
     """Download video with comprehensive error handling and logging"""
     start_time = time.time()
