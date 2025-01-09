@@ -156,7 +156,7 @@ WORKDIR /app
 ENV WHISPER_CACHE_DIR="/app/whisper_cache"
 
 # Create cache directory (no need for chown here yet)
-RUN mkdir -p ${WHISPER_CACHE_DIR} \
+RUN mkdir -p ${WHISPER_CACHE_DIR} && \
     mkdir -p /app/downloads
 
 # Copy the requirements file first to optimize caching
@@ -166,14 +166,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install openai-whisper && \
-    pip install jsonschema
+    pip install jsonschema && \
     pip install --no-cache-dir yt-dlp
 
 # Create the appuser 
 RUN useradd -m appuser 
 
 # Give appuser ownership of the /app directory (including whisper_cache)
-RUN chown appuser:appuser /app
+RUN chown appuser:appuser /app && \
     chown -R appuser:appuser ${WHISPER_CACHE_DIR} && \
     chown -R appuser:appuser /app/downloads
 
