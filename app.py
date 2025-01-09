@@ -6,6 +6,8 @@ import uuid
 import os
 import time
 from version import BUILD_NUMBER  # Import the BUILD_NUMBER
+from routes.v1.media.download.yt_dlp import v1_media_download_ytdlp_bp
+
 
 MAX_QUEUE_LENGTH = int(os.environ.get('MAX_QUEUE_LENGTH', 0))
 
@@ -130,6 +132,7 @@ def create_app():
     app.register_blueprint(caption_bp)
     app.register_blueprint(extract_keyframes_bp)
     app.register_blueprint(image_to_video_bp)
+    app.register_blueprint(v1_media_download_ytdlp_bp)
     
     
 
