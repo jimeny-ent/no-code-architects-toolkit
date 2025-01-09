@@ -1,6 +1,14 @@
 # Base image
 FROM python:3.9-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Create and set permissions for temp directory
+WORKDIR /tmp
+RUN chmod 777 /tmp
+
 # Install system dependencies, build tools, and libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -44,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libharfbuzz-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install SRT from source (latest version using cmake)
+# Install SRT from source
 RUN git clone https://github.com/Haivision/srt.git && \
     cd srt && \
     mkdir build && cd build && \
@@ -70,9 +78,9 @@ RUN git clone https://github.com/Netflix/vmaf.git && \
     ninja -C build && \
     ninja -C build install && \
     cd ../.. && rm -rf vmaf && \
-    ldconfig  # Update the dynamic linker cache
+    ldconfig
 
-# Manually build and install fdk-aac (since it is not available via apt-get)
+# Install fdk-aac
 RUN git clone https://github.com/mstorsjo/fdk-aac && \
     cd fdk-aac && \
     autoreconf -fiv && \
@@ -81,7 +89,7 @@ RUN git clone https://github.com/mstorsjo/fdk-aac && \
     make install && \
     cd .. && rm -rf fdk-aac
 
-# Install libunibreak (required for ASS_FEATURE_WRAP_UNICODE)
+# Install libunibreak
 RUN git clone https://github.com/adah1972/libunibreak.git && \
     cd libunibreak && \
     ./autogen.sh && \
@@ -91,7 +99,7 @@ RUN git clone https://github.com/adah1972/libunibreak.git && \
     ldconfig && \
     cd .. && rm -rf libunibreak
 
-# Build and install libass with libunibreak support and ASS_FEATURE_WRAP_UNICODE enabled
+# Build and install libass
 RUN git clone https://github.com/libass/libass.git && \
     cd libass && \
     autoreconf -i && \
@@ -102,7 +110,7 @@ RUN git clone https://github.com/libass/libass.git && \
     ldconfig && \
     cd .. && rm -rf libass
 
-# Build and install FFmpeg with all required features
+# Build and install FFmpeg
 RUN git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg && \
     cd ffmpeg && \
     git checkout n7.0.2 && \
@@ -141,57 +149,48 @@ RUN git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg && \
     make install && \
     cd .. && rm -rf ffmpeg
 
-# Add /usr/local/bin to PATH (if not already included)
+# Add /usr/local/bin to PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
-# Copy fonts into the custom fonts directory
+# Copy fonts
 COPY ./fonts /usr/share/fonts/custom
 
-# Rebuild the font cache so that fontconfig can see the custom fonts
+# Rebuild font cache
 RUN fc-cache -f -v
 
-# Set work directory
+# Set work directory and create necessary directories
 WORKDIR /app
-
-# Set environment variable for Whisper cache
 ENV WHISPER_CACHE_DIR="/app/whisper_cache"
+RUN mkdir -p ${WHISPER_CACHE_DIR} /app/downloads /tmp/downloads && \
+    chmod 777 /tmp/downloads
 
-# Create cache directory (no need for chown here yet)
-RUN mkdir -p ${WHISPER_CACHE_DIR} && \
-    mkdir -p /app/downloads
-
-# Copy the requirements file first to optimize caching
+# Copy and install requirements
 COPY requirements.txt .
-
-# Install Python dependencies, upgrade pip 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install openai-whisper && \
     pip install jsonschema && \
     pip install --no-cache-dir yt-dlp
 
-# Create the appuser 
-RUN useradd -m appuser 
-
-# Give appuser ownership of the /app directory (including whisper_cache)
-RUN chown appuser:appuser /app && \
+# Create and configure user
+RUN useradd -m appuser && \
+    chown appuser:appuser /app && \
     chown -R appuser:appuser ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app/downloads
+    chown -R appuser:appuser /app/downloads && \
+    chown -R appuser:appuser /tmp/downloads
 
-# Important: Switch to the appuser before downloading the model
 USER appuser
 
+# Download Whisper model
 RUN python -c "import os; print(os.environ.get('WHISPER_CACHE_DIR')); import whisper; whisper.load_model('base')"
 
-# Copy the rest of the application code
+# Copy application code
 COPY . .
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 8080
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-
+# Create and configure startup script
 RUN echo '#!/bin/bash\n\
 gunicorn --bind 0.0.0.0:8080 \
     --workers ${GUNICORN_WORKERS:-2} \
@@ -201,5 +200,5 @@ gunicorn --bind 0.0.0.0:8080 \
     app:app' > /app/run_gunicorn.sh && \
     chmod +x /app/run_gunicorn.sh
 
-# Run the shell script
+# Run the application
 CMD ["/app/run_gunicorn.sh"]
